@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Colors (Sui Blue) */
+  --color-sui-50: #f2f8fd;
+  --color-sui-100: #e3f0fb;
+  --color-sui-400: #3da5ff;
+  --color-sui-500: #008cff;
+  --color-sui-600: #006fee;
+  --color-sui-900: #003570;
+
+  /* Animations */
+  --animate-fade-in: fadeIn 0.5s ease-out;
+  
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Base Styles */
+body {
+  background-color: white;
+  color: #0f172a; /* Slate 900 */
+}
