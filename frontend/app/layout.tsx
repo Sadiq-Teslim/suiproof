@@ -1,33 +1,51 @@
-"use client";
-import "./globals.css"; // <--- CRITICAL IMPORT
-import '@mysten/dapp-kit/dist/index.css';
+import type { Metadata } from "next";
+import { ReactNode } from "react";
 
-import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
-import { getFullnodeUrl } from '@mysten/sui/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import "./globals.css";
 
-// Setup Testnet connection
-const { networkConfig } = createNetworkConfig({
-	testnet: { url: getFullnodeUrl('testnet') },
-	mainnet: { url: getFullnodeUrl('mainnet') },
-});
-const queryClient = new QueryClient();
+import { Providers } from "@/components/Providers";
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const siteDescription =
+  "Generate zero-storage proofs of existence on the Sui blockchain and keep full custody of your documents.";
+
+export const metadata: Metadata = {
+  title: {
+    default: "SuiProof | Verifiable documents, stored nowhere",
+    template: "%s | SuiProof",
+  },
+  description: siteDescription,
+  applicationName: "SuiProof",
+  keywords: [
+    "SuiProof",
+    "Sui",
+    "document verification",
+    "zero-knowledge",
+    "hashing",
+    "web3",
+  ],
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SuiProof",
+    description: siteDescription,
+  },
+  openGraph: {
+    type: "website",
+    title: "SuiProof | Verifiable documents, stored nowhere",
+    description: siteDescription,
+    siteName: "SuiProof",
+  },
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <QueryClientProvider client={queryClient}>
-          <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-            <WalletProvider>
-              {children}
-            </WalletProvider>
-          </SuiClientProvider>
-        </QueryClientProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

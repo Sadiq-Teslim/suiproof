@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react/no-unescaped-entities */
 "use client";
 import { useEffect, useState } from "react";
-import { useSuiClient } from "@mysten/dapp-kit";
+import {
+  useSuiClient,
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+} from "@mysten/dapp-kit";
+import { Transaction } from "@mysten/sui/transactions";
 import { useParams } from "next/navigation";
 import {
   ShieldCheck,
@@ -9,6 +15,9 @@ import {
   Loader2,
   FileSearch,
   ArrowLeft,
+  Send,
+  UserCheck,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import Dropzone from "../../../components/Dropzone";
@@ -21,20 +30,30 @@ const MOCK_MODE = false;
 export default function VerifyPage() {
   const params = useParams();
   const objectId = params.id as string;
-  const suiClient = useSuiClient();
 
+  // Blockchain Hooks
+  const suiClient = useSuiClient();
+  const account = useCurrentAccount();
+  const { mutate: signAndExecute } = useSignAndExecuteTransaction();
+
+  // State
   const [onChainHash, setOnChainHash] = useState<string | null>(null);
+  const [ownerAddress, setOwnerAddress] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<
     "FETCHING" | "IDLE" | "VALID" | "INVALID" | "ERROR"
   >("FETCHING");
 
-  // Fetch Object
+  // Transfer State
+  const [recipient, setRecipient] = useState("");
+  const [isTransferring, setIsTransferring] = useState(false);
+
+  // 1. Fetch Object & Owner
   useEffect(() => {
     const fetchObject = async () => {
       if (MOCK_MODE) {
-        // Mock Responsessss
         setOnChainHash("MOCK_HASH_123");
+        setOwnerAddress(account?.address || "0xMockOwner");
         setStatus("IDLE");
         return;
       }
@@ -42,11 +61,24 @@ export default function VerifyPage() {
       try {
         const obj = await suiClient.getObject({
           id: objectId,
-          options: { showContent: true },
+          options: { showContent: true, showOwner: true }, // Request Owner Info
         });
 
         const content = obj.data?.content;
 
+        // Parse Owner
+        const ownerData = obj.data?.owner;
+        let owner = null;
+        if (ownerData && typeof ownerData === "object") {
+          if ("AddressOwner" in ownerData) {
+            owner = ownerData.AddressOwner;
+          } else if ("ObjectOwner" in ownerData) {
+            owner = ownerData.ObjectOwner;
+          }
+        }
+        if (owner) setOwnerAddress(owner);
+
+        // Parse Content
         if (content && content.dataType === "moveObject") {
           const fields = content.fields as any;
           if (fields.doc_hash) {
@@ -68,9 +100,9 @@ export default function VerifyPage() {
     };
 
     fetchObject();
-  }, [objectId, suiClient]);
+  }, [objectId, suiClient, account]);
 
-  // Verify
+  // 2. Verify Logic (USING FETCH API)
   const handleVerify = async () => {
     if (!file) return;
     setStatus("FETCHING");
@@ -80,10 +112,12 @@ export default function VerifyPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+
+      // --- API ROUTE CALL ---
       const res = await fetch("/api/hash", { method: "POST", body: formData });
       const { hash } = await res.json();
+      // ---------------------
 
-      // In MOCK_MODE, we accept any file if the mock hash is set
       if (MOCK_MODE) {
         setStatus("VALID");
         return;
@@ -99,8 +133,45 @@ export default function VerifyPage() {
     }
   };
 
+  // 3. Transfer Logic (Killer Feature)
+  const handleTransfer = async () => {
+    if (!recipient.startsWith("0x") || recipient.length < 60) {
+      alert("Please enter a valid Sui address");
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      const tx = new Transaction();
+      // Native Sui Object Transfer
+      tx.transferObjects([tx.object(objectId)], tx.pure.address(recipient));
+
+      signAndExecute(
+        { transaction: tx },
+        {
+          onSuccess: () => {
+            alert("Ownership Transferred Successfully!");
+            setIsTransferring(false);
+            window.location.reload(); // Reload to see new owner
+          },
+          onError: (err) => {
+            console.error(err);
+            alert("Transfer Failed. Ensure the object allows transfer.");
+            setIsTransferring(false);
+          },
+        }
+      );
+    } catch (e) {
+      console.error(e);
+      setIsTransferring(false);
+    }
+  };
+
+  // Check if current user is the owner
+  const isOwner = account?.address === ownerAddress;
+
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
+    <div className="min-h-screen bg-slate-50 font-sans pb-20">
       <Navbar />
       <div className="max-w-xl mx-auto px-6 py-12">
         <Link
@@ -110,7 +181,8 @@ export default function VerifyPage() {
           <ArrowLeft size={16} /> Back to Upload
         </Link>
 
-        <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200 text-center animate-fade-in">
+        {/* --- MAIN VERIFICATION CARD --- */}
+        <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200 text-center animate-fade-in relative overflow-hidden">
           <div className="mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-mono mb-4">
               Object: {objectId.slice(0, 6)}...{objectId.slice(-4)}
@@ -119,6 +191,24 @@ export default function VerifyPage() {
               Verify Document
             </h1>
           </div>
+
+          {/* OWNER BADGE */}
+          {ownerAddress && (
+            <div className="mb-6 flex justify-center">
+              <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 border border-blue-100">
+                <UserCheck size={16} />
+                <span>
+                  Owned by: {ownerAddress.slice(0, 6)}...
+                  {ownerAddress.slice(-4)}
+                </span>
+                {isOwner && (
+                  <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded ml-1">
+                    YOU
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {status === "FETCHING" && (
             <div className="py-12 flex flex-col items-center">
@@ -189,6 +279,50 @@ export default function VerifyPage() {
             </div>
           )}
         </div>
+
+        {/* --- TRANSFER OWNERSHIP SECTION (KILLER FEATURE) --- */}
+        {isOwner && (
+          <div className="mt-8 bg-white rounded-3xl p-8 shadow-lg border border-slate-100 animate-fade-in">
+            <div className="flex items-center gap-3 mb-4 text-slate-900">
+              <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                <Send size={20} />
+              </div>
+              <h3 className="font-bold text-lg">Transfer Ownership</h3>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              You are the verified owner of this proof. You can transfer it to
+              another wallet (e.g., selling a car title).
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <input
+                type="text"
+                placeholder="Recipient Address (0x...)"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <button
+                onClick={handleTransfer}
+                disabled={isTransferring}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+              >
+                {isTransferring ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  "Transfer Proof"
+                )}
+              </button>
+            </div>
+            <div className="mt-4 flex items-start gap-2 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-800">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              <p>
+                This action is irreversible. The proof object will move from
+                your wallet to the recipient's wallet instantly.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
