@@ -22,7 +22,6 @@ import Dropzone from "../components/Dropzone";
 const MOCK_MODE = false; // Set to true to skip Wallet interaction
 const REAL_PACKAGE_ID =
   "0x004f5e4f079b9a904de5b6a0007e8cff1bd171c0900cb918e7ec56143917d8fd";
-  
 // ---------------------
 
 export default function Home() {
@@ -48,7 +47,7 @@ export default function Home() {
       setHash(data.hash);
       setStep(2);
     } catch (e) {
-      alert("Hashing failed.");
+      alert("Hashing failed. Ensure backend API is running.");
     } finally {
       setLoading(false);
     }
@@ -71,12 +70,20 @@ export default function Home() {
       // --- REAL PATH ---
       try {
         const tx = new Transaction();
+
+        // Calculate Absolute Expiration Time (Current Time + 24 Hours in ms)
+        // The contract expects a timestamp in the future, not a duration.
+        const expiryTimestamp = Date.now() + 24 * 60 * 60 * 1000;
+
         tx.moveCall({
-          target: `${REAL_PACKAGE_ID}::sui-proof::create_proof`,
+          target: `${REAL_PACKAGE_ID}::document_proof::create_proof`,
           arguments: [
-            tx.object("0x6"), 
+            // Arg0: Hash (vector<u8>)
             tx.pure.vector("u8", Array.from(Buffer.from(hash, "hex"))),
-            tx.pure.u64(86400),
+            // Arg1: Expiration Timestamp (u64) - Must be > current clock
+            tx.pure.u64(expiryTimestamp),
+            // Arg2: System Clock Object
+            tx.object("0x6"),
           ],
         });
 
@@ -90,7 +97,7 @@ export default function Home() {
             },
             onError: (err) => {
               console.error(err);
-              alert("Transaction Failed. See console.");
+              alert("Transaction Failed. Check console for details.");
               setLoading(false);
             },
           }
