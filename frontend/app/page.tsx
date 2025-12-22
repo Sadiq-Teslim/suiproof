@@ -72,7 +72,7 @@ export default function Home() {
       try {
         const tx = new Transaction();
         tx.moveCall({
-          target: `${REAL_PACKAGE_ID}::suiproof::create_proof`,
+          target: `${REAL_PACKAGE_ID}::sui-proof::create_proof`,
           arguments: [
             tx.object("0x6"), 
             tx.pure.vector("u8", Array.from(Buffer.from(hash, "hex"))),
