@@ -21,7 +21,7 @@ import Dropzone from "../components/Dropzone";
 // --- CONFIGURATION ---
 const MOCK_MODE = false; // Set to true to skip Wallet interaction
 const REAL_PACKAGE_ID =
-  "0xde8566572a488eb1cb87145ef1333e99981b711192d92cf9e84e85626bbcee47";
+  "0x004f5e4f079b9a904de5b6a0007e8cff1bd171c0900cb918e7ec56143917d8fd";
 // ---------------------
 
 export default function Home() {

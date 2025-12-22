@@ -1,51 +1,37 @@
-import type { Metadata } from "next";
-import { ReactNode } from "react";
-
+"use client";
 import "./globals.css";
+import "@mysten/dapp-kit/dist/index.css";
 
-import { Providers } from "@/components/Providers";
+import {
+  createNetworkConfig,
+  SuiClientProvider,
+  WalletProvider,
+} from "@mysten/dapp-kit";
+import { getFullnodeUrl } from "@mysten/sui/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const siteDescription =
-  "Generate zero-storage proofs of existence on the Sui blockchain and keep full custody of your documents.";
+// 1. ADD DEVNET HERE
+const { networkConfig } = createNetworkConfig({
+  devnet: { url: getFullnodeUrl("devnet") },
+  testnet: { url: getFullnodeUrl("testnet") },
+  mainnet: { url: getFullnodeUrl("mainnet") },
+});
+const queryClient = new QueryClient();
 
-export const metadata: Metadata = {
-  title: {
-    default: "SuiProof | Verifiable documents, stored nowhere",
-    template: "%s | SuiProof",
-  },
-  description: siteDescription,
-  applicationName: "SuiProof",
-  keywords: [
-    "SuiProof",
-    "Sui",
-    "document verification",
-    "zero-knowledge",
-    "hashing",
-    "web3",
-  ],
-  icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "SuiProof",
-    description: siteDescription,
-  },
-  openGraph: {
-    type: "website",
-    title: "SuiProof | Verifiable documents, stored nowhere",
-    description: siteDescription,
-    siteName: "SuiProof",
-  },
-};
-
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <QueryClientProvider client={queryClient}>
+          {/* 2. CHANGE DEFAULT NETWORK TO "devnet" */}
+          <SuiClientProvider networks={networkConfig} defaultNetwork="devnet">
+            <WalletProvider>{children}</WalletProvider>
+          </SuiClientProvider>
+        </QueryClientProvider>
       </body>
     </html>
   );
