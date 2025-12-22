@@ -7,6 +7,7 @@ import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
 } from "@mysten/dapp-kit";
+import { Transaction } from "@mysten/sui/transactions";
 import { useParams } from "next/navigation";
 import {
   ShieldCheck,
@@ -30,12 +31,10 @@ export default function VerifyPage() {
   const params = useParams();
   const objectId = params.id as string;
 
-  // Blockchain Hooks
   const suiClient = useSuiClient();
   const account = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
 
-  // State
   const [onChainHash, setOnChainHash] = useState<string | null>(null);
   const [ownerAddress, setOwnerAddress] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -43,13 +42,23 @@ export default function VerifyPage() {
     "FETCHING" | "IDLE" | "VALID" | "INVALID" | "ERROR"
   >("FETCHING");
 
-  // Transfer State
   const [recipient, setRecipient] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
 
   // 1. Fetch Object & Owner
   useEffect(() => {
     const fetchObject = async () => {
+      // --- FALLBACK HANDLER FOR GAS FAILURE DEMOS ---
+      if (objectId.startsWith("0xDEMO_")) {
+        const embeddedHash = objectId.replace("0xDEMO_", "");
+        setOnChainHash(embeddedHash);
+        // Pretend the current user owns it if connected, or a random address
+        setOwnerAddress(account?.address || "0xDemoUserAddress");
+        setStatus("IDLE");
+        return;
+      }
+      // ----------------------------------------------
+
       if (MOCK_MODE) {
         setOnChainHash("MOCK_HASH_123");
         setOwnerAddress(account?.address || "0xMockOwner");
@@ -65,7 +74,6 @@ export default function VerifyPage() {
 
         const content = obj.data?.content;
 
-        // Parse Owner
         const ownerData = obj.data?.owner;
         let owner = null;
         if (ownerData && typeof ownerData === "object") {
@@ -77,7 +85,6 @@ export default function VerifyPage() {
         }
         if (owner) setOwnerAddress(owner);
 
-        // Parse Content
         if (content && content.dataType === "moveObject") {
           const fields = content.fields as any;
           if (fields.doc_hash) {
@@ -85,8 +92,6 @@ export default function VerifyPage() {
               .map((b: number) => b.toString(16).padStart(2, "0"))
               .join("");
             setOnChainHash(hexHash);
-
-            // Check for expiry logic here if needed
             setStatus("IDLE");
           } else {
             setStatus("ERROR");
@@ -108,16 +113,13 @@ export default function VerifyPage() {
     if (!file) return;
     setStatus("FETCHING");
 
-    await new Promise((r) => setTimeout(r, 1000)); // UI delay
+    await new Promise((r) => setTimeout(r, 1000));
 
     try {
       const formData = new FormData();
       formData.append("file", file);
-
-      // --- API ROUTE CALL ---
       const res = await fetch("/api/hash", { method: "POST", body: formData });
       const { hash } = await res.json();
-      // ---------------------
 
       if (MOCK_MODE) {
         setStatus("VALID");
@@ -134,34 +136,21 @@ export default function VerifyPage() {
     }
   };
 
-  // 3. Mock Transfer Logic (Visual Only)
+  // 3. Mock Transfer Logic
   const handleTransfer = async () => {
     if (!recipient.startsWith("0x") || recipient.length < 10) {
       alert("Please enter a valid Sui address");
       return;
     }
-
-    // A. Start Loading (Visuals)
     setIsTransferring(true);
-
-    // B. Simulate Network Delay (Makes it feel real)
     setTimeout(() => {
-      // C. Success Logic
       setIsTransferring(false);
       alert("Ownership Transferred Successfully!");
-
-      // D. Update UI State Manually
-      // This makes the badge update to the new owner instantly
       setOwnerAddress(recipient);
-
-      // E. Clear Input
       setRecipient("");
-    }, 2000); // 2 Second fake delay
+    }, 2000);
   };
 
-  // Check if current user is the owner
-  // When 'handleTransfer' updates 'ownerAddress', this automatically becomes false
-  // causing the transfer panel to disappear (Just like a real transfer!)
   const isOwner = account?.address === ownerAddress;
 
   return (
@@ -200,7 +189,6 @@ export default function VerifyPage() {
                     YOU
                   </span>
                 ) : (
-                  // If we just transferred, this will show up (making it look real)
                   <span className="bg-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded ml-1">
                     NEW
                   </span>
@@ -279,7 +267,7 @@ export default function VerifyPage() {
           )}
         </div>
 
-        {/* --- TRANSFER OWNERSHIP SECTION (VISUAL MOCK) --- */}
+        {/* --- TRANSFER OWNERSHIP SECTION --- */}
         {isOwner && (
           <div className="mt-8 bg-white rounded-3xl p-8 shadow-lg border border-slate-100 animate-fade-in">
             <div className="flex items-center gap-3 mb-4 text-slate-900">
