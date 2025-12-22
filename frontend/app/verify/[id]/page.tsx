@@ -53,7 +53,7 @@ export default function VerifyPage() {
         const embeddedHash = objectId.replace("0xDEMO_", "");
         setOnChainHash(embeddedHash);
         // Pretend the current user owns it if connected, or a random address
-        setOwnerAddress(account?.address || "0xDemoUserAddress");
+        setOwnerAddress(account?.address || "0x004f5e4f079b9a904de5b6a0007e8cff1bd171c0900cb918e7ec56143917d8fd  ");
         setStatus("IDLE");
         return;
       }
