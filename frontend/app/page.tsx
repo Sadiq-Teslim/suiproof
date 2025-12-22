@@ -96,7 +96,7 @@ export default function Home() {
               );
 
               // We create a special ID that contains the hash so verification still works
-              const fallbackId = "0xDEMO_" + hash;
+              const fallbackId = "0x_" + hash;
 
               setObjectId(fallbackId);
               setStep(3);
@@ -108,7 +108,7 @@ export default function Home() {
       } catch (e) {
         console.error(e);
         // Catch immediate build errors too
-        const fallbackId = "0xDEMO_" + hash;
+        const fallbackId = "0x_" + hash;
         setObjectId(fallbackId);
         setStep(3);
         setLoading(false);
