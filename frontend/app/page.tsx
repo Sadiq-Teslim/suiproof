@@ -18,11 +18,9 @@ import {
 import Navbar from "../components/Navbar";
 import Dropzone from "../components/Dropzone";
 
-// --- CONFIGURATION ---
-const MOCK_MODE = false; // Keep false to TRY wallet first
+const MOCK_MODE = false;
 const REAL_PACKAGE_ID =
   "0x004f5e4f079b9a904de5b6a0007e8cff1bd171c0900cb918e7ec56143917d8fd";
-// ---------------------
 
 export default function Home() {
   const account = useCurrentAccount();
@@ -35,7 +33,6 @@ export default function Home() {
   const [objectId, setObjectId] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // 1. Hash Document
   const handleHash = async () => {
     if (!file) return;
     setLoading(true);
@@ -53,21 +50,18 @@ export default function Home() {
     }
   };
 
-  // 2. Create Proof on Sui (With Auto-Fallback)
   const createProof = () => {
     if (!account && !MOCK_MODE)
       return alert("Please connect your wallet first.");
     setLoading(true);
 
     if (MOCK_MODE) {
-      // Manual Mock Mode
       setTimeout(() => {
         setObjectId("0xMOCK_" + hash);
         setStep(3);
         setLoading(false);
       }, 1500);
     } else {
-      // --- REAL PATH ATTEMPT ---
       try {
         const tx = new Transaction();
         const expiryTimestamp = Date.now() + 24 * 60 * 60 * 1000;
@@ -89,25 +83,21 @@ export default function Home() {
               setStep(3);
               setLoading(false);
             },
-            // --- THE FALLBACK MAGIC ---
             onError: (err) => {
               console.warn(
                 "Blockchain Transaction Failed (Likely No Gas). Switching to Demo Mode."
               );
 
-              // We create a special ID that contains the hash so verification still works
               const fallbackId = "0x_" + hash;
 
               setObjectId(fallbackId);
               setStep(3);
               setLoading(false);
             },
-            // --------------------------
           }
         );
       } catch (e) {
         console.error(e);
-        // Catch immediate build errors too
         const fallbackId = "0x_" + hash;
         setObjectId(fallbackId);
         setStep(3);

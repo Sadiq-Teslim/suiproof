@@ -23,9 +23,7 @@ import Link from "next/link";
 import Dropzone from "../../../components/Dropzone";
 import Navbar from "../../../components/Navbar";
 
-// --- CONFIGURATION ---
 const MOCK_MODE = false;
-// ---------------------
 
 export default function VerifyPage() {
   const params = useParams();
@@ -45,19 +43,18 @@ export default function VerifyPage() {
   const [recipient, setRecipient] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
 
-  // 1. Fetch Object & Owner
   useEffect(() => {
     const fetchObject = async () => {
-      // --- FALLBACK HANDLER FOR GAS FAILURE DEMOS ---
       if (objectId.startsWith("0x_")) {
         const embeddedHash = objectId.replace("0x_", "");
         setOnChainHash(embeddedHash);
-        // Pretend the current user owns it if connected, or a random address
-        setOwnerAddress(account?.address || "0x004f5e4f079b9a904de5b6a0007e8cff1bd171c0900cb918e7ec56143917d8fd  ");
+        setOwnerAddress(
+          account?.address ||
+            "0x004f5e4f079b9a904de5b6a0007e8cff1bd171c0900cb918e7ec56143917d8fd  "
+        );
         setStatus("IDLE");
         return;
       }
-      // ----------------------------------------------
 
       if (MOCK_MODE) {
         setOnChainHash("MOCK_HASH_123");
@@ -108,7 +105,6 @@ export default function VerifyPage() {
     if (objectId) fetchObject();
   }, [objectId, suiClient, account]);
 
-  // 2. Verify Logic
   const handleVerify = async () => {
     if (!file) return;
     setStatus("FETCHING");
@@ -136,7 +132,6 @@ export default function VerifyPage() {
     }
   };
 
-  // 3. Mock Transfer Logic
   const handleTransfer = async () => {
     if (!recipient.startsWith("0x") || recipient.length < 10) {
       alert("Please enter a valid Sui address");
@@ -164,7 +159,6 @@ export default function VerifyPage() {
           <ArrowLeft size={16} /> Back to Upload
         </Link>
 
-        {/* --- MAIN VERIFICATION CARD --- */}
         <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200 text-center animate-fade-in relative overflow-hidden">
           <div className="mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-mono mb-4">
@@ -175,7 +169,6 @@ export default function VerifyPage() {
             </h1>
           </div>
 
-          {/* OWNER BADGE */}
           {ownerAddress && (
             <div className="mb-6 flex justify-center animate-fade-in">
               <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 border border-blue-100 transition-all duration-500">
@@ -267,7 +260,6 @@ export default function VerifyPage() {
           )}
         </div>
 
-        {/* --- TRANSFER OWNERSHIP SECTION --- */}
         {isOwner && (
           <div className="mt-8 bg-white rounded-3xl p-8 shadow-lg border border-slate-100 animate-fade-in">
             <div className="flex items-center gap-3 mb-4 text-slate-900">
