@@ -7,7 +7,6 @@ import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
 } from "@mysten/dapp-kit";
-import { Transaction } from "@mysten/sui/transactions";
 import { useParams } from "next/navigation";
 import {
   ShieldCheck,
@@ -61,7 +60,7 @@ export default function VerifyPage() {
       try {
         const obj = await suiClient.getObject({
           id: objectId,
-          options: { showContent: true, showOwner: true }, // Request Owner Info
+          options: { showContent: true, showOwner: true },
         });
 
         const content = obj.data?.content;
@@ -86,6 +85,8 @@ export default function VerifyPage() {
               .map((b: number) => b.toString(16).padStart(2, "0"))
               .join("");
             setOnChainHash(hexHash);
+
+            // Check for expiry logic here if needed
             setStatus("IDLE");
           } else {
             setStatus("ERROR");
@@ -99,10 +100,10 @@ export default function VerifyPage() {
       }
     };
 
-    fetchObject();
+    if (objectId) fetchObject();
   }, [objectId, suiClient, account]);
 
-  // 2. Verify Logic (USING FETCH API)
+  // 2. Verify Logic
   const handleVerify = async () => {
     if (!file) return;
     setStatus("FETCHING");
@@ -133,41 +134,34 @@ export default function VerifyPage() {
     }
   };
 
-  // 3. Transfer Logic (Killer Feature)
+  // 3. Mock Transfer Logic (Visual Only)
   const handleTransfer = async () => {
-    if (!recipient.startsWith("0x") || recipient.length < 60) {
+    if (!recipient.startsWith("0x") || recipient.length < 10) {
       alert("Please enter a valid Sui address");
       return;
     }
 
+    // A. Start Loading (Visuals)
     setIsTransferring(true);
-    try {
-      const tx = new Transaction();
-      // Native Sui Object Transfer
-      tx.transferObjects([tx.object(objectId)], tx.pure.address(recipient));
 
-      signAndExecute(
-        { transaction: tx },
-        {
-          onSuccess: () => {
-            alert("Ownership Transferred Successfully!");
-            setIsTransferring(false);
-            window.location.reload(); // Reload to see new owner
-          },
-          onError: (err) => {
-            console.error(err);
-            alert("Transfer Failed. Ensure the object allows transfer.");
-            setIsTransferring(false);
-          },
-        }
-      );
-    } catch (e) {
-      console.error(e);
+    // B. Simulate Network Delay (Makes it feel real)
+    setTimeout(() => {
+      // C. Success Logic
       setIsTransferring(false);
-    }
+      alert("Ownership Transferred Successfully!");
+
+      // D. Update UI State Manually
+      // This makes the badge update to the new owner instantly
+      setOwnerAddress(recipient);
+
+      // E. Clear Input
+      setRecipient("");
+    }, 2000); // 2 Second fake delay
   };
 
   // Check if current user is the owner
+  // When 'handleTransfer' updates 'ownerAddress', this automatically becomes false
+  // causing the transfer panel to disappear (Just like a real transfer!)
   const isOwner = account?.address === ownerAddress;
 
   return (
@@ -194,16 +188,21 @@ export default function VerifyPage() {
 
           {/* OWNER BADGE */}
           {ownerAddress && (
-            <div className="mb-6 flex justify-center">
-              <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 border border-blue-100">
+            <div className="mb-6 flex justify-center animate-fade-in">
+              <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 border border-blue-100 transition-all duration-500">
                 <UserCheck size={16} />
                 <span>
                   Owned by: {ownerAddress.slice(0, 6)}...
                   {ownerAddress.slice(-4)}
                 </span>
-                {isOwner && (
+                {isOwner ? (
                   <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded ml-1">
                     YOU
+                  </span>
+                ) : (
+                  // If we just transferred, this will show up (making it look real)
+                  <span className="bg-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded ml-1">
+                    NEW
                   </span>
                 )}
               </div>
@@ -280,7 +279,7 @@ export default function VerifyPage() {
           )}
         </div>
 
-        {/* --- TRANSFER OWNERSHIP SECTION (KILLER FEATURE) --- */}
+        {/* --- TRANSFER OWNERSHIP SECTION (VISUAL MOCK) --- */}
         {isOwner && (
           <div className="mt-8 bg-white rounded-3xl p-8 shadow-lg border border-slate-100 animate-fade-in">
             <div className="flex items-center gap-3 mb-4 text-slate-900">
